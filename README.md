@@ -1,4 +1,5 @@
 # bibleapp
+## Forked for use by NCSU, UNC, & Duke
 
 ## Project setup
 ```
