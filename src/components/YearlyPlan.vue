@@ -1,79 +1,111 @@
 <template>
-  <div v-show="$store.state.mainView">
+  <div v-show="store.state.mainView" style="margin-top:45px">
     <div
-      v-for="(day, index) in days" :key="day.id" :ref="'day-ref-'+index">
-       <div class="row" @click="getVerseList(day)">
-          <div class="date">
-            <div class="date-header">{{day.date.toLocaleString('default', { month: 'long' })}}</div>
-            <span>{{day.date.getDate()}}</span>
+      v-for="(day, index) in days" 
+      :key="index"
+    >
+      <div 
+        :ref="el => setDayRef(el, index)"
+        class="row" 
+        @click="getVerseList(day)"
+      >
+        <div class="date">
+          <div class="date-header">
+            {{ day.date.toLocaleString('default', { month: 'long' }) }}
           </div>
-
-          <span class="column">
-            <span id="Day">{{day.date.toLocaleDateString('default', { weekday: 'long' })}}</span>
-            <span id="Reading">{{day.verses}}</span>
-          </span>
-        <i class="caret_right fa fa-angle-right"></i>
+          <span>{{ day.date.getDate() }}</span>
         </div>
+
+        <span class="column">
+          <span id="Day">
+            {{ day.date.toLocaleDateString('default', { weekday: 'long' }) }}
+          </span>
+          <span id="Reading">{{ day.verses }}</span>
+        </span>
+        <i class="caret_right fa fa-angle-right"></i>
+      </div>
     </div>
   </div>
 </template>
 
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useStore } from 'vuex'
+import { event } from 'vue-gtag-next'
 
-<script>
-export default {
-  name: 'YearlyPlan',
-  data() {
-    return {
-      days: 0,
-      today: 0,
-    };
-  },
+// Store
+const store = useStore()
 
-  mounted() {
-    this.loadPlans();
-    this.$store.commit('SET_TODAYSREADING', this.today);
-  },
+// Reactive state
+const days = ref([])
+const today = ref(0)
+const dayRefs = ref({})
 
-  methods: {
-    loadPlans() {
-      // Grab array content from the json file 
-      const key = Object.keys(this.$store.state.plan)[0];
-      // 
-      const verseList = this.$store.state.plan[key];
+// Methods
+const setDayRef = (el, index) => {
+  if (el) {
+    dayRefs.value[`day-ref-${index}`] = el
+  }
+}
 
-      const days = [];
-      let today = 0;
+const scrollToToday = () => {
+  const element = dayRefs.value[`day-ref-${today.value}`]
+  if (element) {
+    const top = element.offsetTop - 45 // Subtract 45px from the scroll position
+    window.scrollTo({
+      top: top,
+      behavior: 'smooth'
+    })
+  }
+}
 
-      const todaysDate = new Date();
-      const nextDate = new Date(key);
-      for (let i = 0; i < verseList.length; i++) {
-        const date = new Date(nextDate);
-        if (date.toLocaleDateString() === todaysDate.toLocaleDateString()) {
-          today = i;
-        }
-        days.push({'date': date, 'verses': verseList[i]});
-        nextDate.setDate(nextDate.getDate() + 1);
-      }
-      this.days = days;
-      this.today = today;
-    },
+const loadPlans = () => {
+  const key = Object.keys(store.state.plan)[0]
+  const verseList = store.state.plan[key]
 
-    getVerseList(day) {
-      const verseList = day.verses;
-      this.$store.commit('PLAN_SELECTED');
-      this.$store.dispatch('getVerseList', verseList);
-      this.$gtag.event('PLAN_SELECTED', {
-        'event_category': 'Plans',
-        'event_label': day.date.toLocaleDateString(),
-      });
-    },
-  },
-};
+  const daysArray = []
+  let todayIndex = 0
 
+  const todaysDate = new Date()
+  const nextDate = new Date(key)
+  
+  for (let i = 0; i < verseList.length; i++) {
+    const date = new Date(nextDate)
+    if (date.toLocaleDateString() === todaysDate.toLocaleDateString()) {
+      todayIndex = i
+    }
+    daysArray.push({
+      date: date,
+      verses: verseList[i]
+    })
+    nextDate.setDate(nextDate.getDate() + 1)
+  }
+  
+  days.value = daysArray
+  today.value = todayIndex
+}
+
+const getVerseList = (day) => {
+  const verseList = day.verses
+  store.commit('PLAN_SELECTED')
+  store.dispatch('getVerseList', verseList)
+
+  event('PLAN_SELECTED', {
+    event_category: 'Plans',
+    event_label: day.date.toLocaleDateString()
+  })
+}
+
+// Lifecycle hooks
+onMounted(() => {
+  loadPlans()
+  store.commit('SET_TODAYSREADING', today.value)
+  // Add a small delay to ensure refs are properly set
+  setTimeout(scrollToToday, 100)
+})
 
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
 .row {
   position: relative;
@@ -83,16 +115,15 @@ export default {
   transition: all 0.2s linear;
   text-align: left;
   font-size: 20px;
-  margin-left: 0px;
-  padding: 10px 0px 10px 0px;
+  margin-left: 0;
+  padding: 10px 0;
+  cursor: pointer;
 }
-img {
-  width: 30px;
-  height: 30px;
-  position: absolute;
-  right: 1rem;
-  top: 1em;
+
+.row:hover {
+  background-color: #f5f5f5;
 }
+
 .date {
   background-color: white;
   margin: 5px 10px;
@@ -105,7 +136,10 @@ img {
   text-align: center;
   overflow: hidden;
   justify-content: center;
+  display: flex;
+  flex-direction: column;
 }
+
 .date-header {
   color: #d32f2f;
   text-align: center;
@@ -115,23 +149,36 @@ img {
   background-color: #ffebee;
   padding: 5px 0;
 }
+
 .date span {
   font-family: "Times New Roman";
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
 .column {
   margin-left: 10px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: left;
+  align-items: flex-start;
   padding: 0;
   overflow: hidden;
+  flex: 1;
 }
+
 #Day {
   font-size: 1.5rem;
+  line-height: 1.8rem;
+  margin-bottom: 4px;
 }
+
 #Reading {
   font-size: 1rem;
+  line-height: 1.2rem;
+  color: rgba(0, 0, 0, 0.7);
 }
 
 .caret_right {
@@ -139,7 +186,11 @@ img {
   height: 30px;
   position: absolute;
   right: 1rem;
-  top: 1.5em;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.5);
 }
-
 </style>

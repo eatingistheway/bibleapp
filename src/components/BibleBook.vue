@@ -1,142 +1,134 @@
 <template>
+  <div role="tablist" v-show="store.state.mainView" :key="componentKey">
+    <v-expansion-panels>
+      <v-expansion-panel
+        v-for="book in store.state.books"
+        :key="book.name"
+      >
+        <v-expansion-panel-title>
+          <div class="bible_button">
+            {{ book.name }}
+            <v-icon
+              class="caret_right"
+              :class="{ 'rotate': rotate }"
+            >
+            </v-icon>
+          </div>
+        </v-expansion-panel-title>
 
-<!--This component will appear while isBible is true-->
-<div role="tablist" v-show="mainView" :key="componentKey">
-
-<!-- Used Vue v-for directive to Loop through book names and create copies of outer card container.
-    Each card will have a button with a unique key id to match its name-->
-  <b-card no-body
-      style="border-style:none; margin:0px;"
-      class="mb-1"
-      v-for="book in books"
-      :key="book.name">
-
-    <b-card-header
-      header-tag="header"
-      style="border-style:none"
-      class="p-1"
-      role="tab">
-
-      <!--Used v-b-toogle with Vue dynamic argument to grab the specific id of each button.
-         This ensures that only one button changes toggle state from visibile to invisible -->
-      <b-button
-        class="bible_button"
-        block v-b-toggle:[book.name]
-        v-on:click="rotate = !rotate" variant="info">
-          {{book.name}}
-        <i class="caret_right fa fa-angle-right"></i>
-      </b-button>
-
-    </b-card-header>
-
-    <b-collapse
-      v-bind:id="book.name"
-      style="margin-bottom:10px;"
-      invisible accordion="my-accordion"
-      role="tabpanel">
-
-      <b-row cols="6" style="margin:0px;">
-
-        <b-button
-          tabindex="0"
-          class="chapter_card"
-          v-bind:id="book.name"
-          v-for="chapterNum in book.chapters"
-          :key="chapterNum"
-          v-on:click.passive="getVerses(book.name, chapterNum);">
-            {{chapterNum}}
-        </b-button>
-      </b-row>
-    </b-collapse>
-  </b-card>
-</div>
+        <v-expansion-panel-text>
+          <v-container fluid>
+            <v-row dense>
+              <v-col
+                v-for="chapterNum in book.chapters"
+                :key="chapterNum"
+                cols="2"
+                xs="4"
+                sm="2"
+                md="2"
+                class="pa-1"
+              >
+                <v-btn
+                  class="chapter_card"
+                  variant="flat"
+                  @click="getVerses(book.name, chapterNum)"
+                  block
+                >
+                  {{ chapterNum }}
+                </v-btn>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+    </v-expansion-panels>
+  </div>
 </template>
 
-<script>
-import {mapState} from 'vuex';
+<script setup>
+import { ref } from 'vue'
+import { useStore } from 'vuex'
+import { event } from 'vue-gtag-next'
 
-export default {
-  name: 'BibleBook',
-  data() {
-    return {
-      componentKey: 0,
-      rotate: true,
-    };
-  },
+// Store
+const store = useStore()
 
-  computed: {
-    ...mapState([
-      'mainView',
-      'books',
-    ]),
-  },
+// Reactive state
+const componentKey = ref(0)
+const rotate = ref(true)
 
-  methods: {
-    async getVerses(bookName, chapterNum) {
-      this.$store.commit('CHAPTER_SELECTED', {bookName, chapterNum});
-      await this.$store.dispatch('getVerses', {bookName, chapterNum});
-      this.componentKey+=1; // Component id changes so that we can reload a fresh BibleBook
-      // component that's been resetted to closed accordion view
-      this.$gtag.event('CHAPTER_SELECTED', {
-        'event_category': 'Chapters',
-        'event_label': `${bookName} ${chapterNum}`,
-      });
-    },
-  },
-};
-
+// Methods
+const getVerses = async (bookName, chapterNum) => {
+  store.commit('CHAPTER_SELECTED', { bookName, chapterNum })
+  await store.dispatch('getVerses', { bookName, chapterNum })
+  componentKey.value++
+  
+  event('CHAPTER_SELECTED', {
+    event_category: 'Chapters',
+    event_label: `${bookName} ${chapterNum}`
+  })
+}
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-.fade-enter-active, .fade-leave-active {
-   transition: opacity .5s;
- }
+div {
+  top: 25px;
+}
 
- .fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
-   opacity: 0;
- }
+.bible_button {
+  text-align: left;
+  color: #696969;
+  width: 100%;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
 
-  .bible_button{
-    text-align:left;
-    background-color:white;
-    color:#696969;
-    border-style:none;
-    height: 50px;
-  }
+.caret_right {
+  transition: transform 0.3s ease;
+}
 
-  .caret_right{
-    float:right;
-  }
+.caret_right.rotate {
+  transform: rotate(90deg);
+}
 
-  .chapter_card{
-    background-color:white;
-    color:#696969;
-    border-style: none;
-    height: 40px;
-    box-shadow: 5px 5px #DCDCDC;
-    margin-top:5px;
-    margin-left:5px;
-    margin-bottom:5px;
-    margin-right:5px;
-   justify-content: center;
-   align-items:center;
-   height:4em;
-   display:flex;
-  }
+.chapter_card {
+  background-color: white !important;
+  color: #696969 !important;
+  height: 4em !important;
+  box-shadow: 5px 5px #DCDCDC !important;
+  border-radius: 4px !important;
+  text-transform: none !important;
+  font-size: 1rem !important;
+}
 
+/* Vuetify overrides */
+:deep(.v-expansion-panel) {
+  background-color: white !important;
+  margin-bottom: 4px !important;
+}
 
-  .rotate{
-      -moz-transition: all 2s linear;
-      -webkit-transition: all 2s linear;
-      transition: all 2s linear;
-  }
+:deep(.v-expansion-panel-title) {
+  padding: 0 !important;
+  min-height: 50px !important;
+}
 
-  .rotate.down{
-      -ms-transform: rotate(180deg);
-      -moz-transform: rotate(180deg);
-      -webkit-transform: rotate(180deg);
-      transform: rotate(180deg);
-  }
+:deep(.v-expansion-panel-text__wrapper) {
+  padding: 0 !important;
+}
 
+:deep(.v-row) {
+  margin: 0 -4px !important;
+}
+
+:deep(.v-col) {
+  padding: 4px !important;
+}
+
+:deep(.v-btn__content) {
+  width: 100%;
+  justify-content: center;
+}
 </style>

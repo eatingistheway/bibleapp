@@ -1,20 +1,50 @@
-import Vue from 'vue';
-import VueTouch from 'vue-touch';
-import App from './App.vue';
-import {BootstrapVue, IconsPlugin} from 'bootstrap-vue';
-import 'bootstrap/dist/css/bootstrap.css';
-import 'bootstrap-vue/dist/bootstrap-vue.css';
-import axios from 'axios';
-import store from './store';
-import VueGtag from 'vue-gtag';
-Vue.config.productionTip = false;
-Vue.use(BootstrapVue);
-Vue.use(IconsPlugin);
-Vue.prototype.$http = axios;
-Vue.use(VueTouch);
-Vue.use(VueGtag, {config: {id: 'UA-177240655-5'}});
+// main.js
+import { createApp } from "vue";
+import { createVuetify } from "vuetify";
+import VueGtag from "vue-gtag-next";
+import App from "./App.vue";
+import store from "./store";
 
-new Vue({
-  store: store,
-  render: (h) => h(App),
-}).$mount('#app');
+// Vuetify
+import "vuetify/styles";
+import * as components from "vuetify/components";
+import * as directives from "vuetify/directives";
+import "@mdi/font/css/materialdesignicons.css";
+import { aliases, mdi } from "vuetify/iconsets/mdi";
+
+const vuetify = createVuetify({
+  components,
+  directives,
+  icons: {
+    defaultSet: "mdi",
+    aliases,
+    sets: {
+      mdi,
+    },
+  },
+  theme: {
+    defaultTheme: "light",
+    themes: {
+      light: {
+        colors: {
+          primary: "#304148",
+        },
+      },
+    },
+  },
+});
+const app = createApp(App);
+
+// Configure Google Analytics
+app.use(VueGtag, {
+  property: {
+    id: "UA-177240655-5",
+  },
+  isEnabled: true,
+  useDebugger: process.env.NODE_ENV !== "production",
+});
+
+app.use(vuetify);
+app.use(store);
+
+app.mount("#app");
