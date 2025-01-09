@@ -29,7 +29,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, defineExpose } from 'vue'
 import { useStore } from 'vuex'
 import { event } from 'vue-gtag-next'
 
@@ -104,6 +104,10 @@ onMounted(() => {
   setTimeout(scrollToToday, 100)
 })
 
+// Expose methods
+defineExpose({
+  scrollToToday
+})
 </script>
 
 <style scoped>
