@@ -3,6 +3,18 @@ import { createStore } from "vuex";
 import axios from "axios";
 import plan from "../store/plan.json";
 
+// API credentials
+const API_USERNAME = process.env.VUE_APP_API_ID;
+const API_TOKEN = process.env.VUE_APP_API_TOKEN;
+
+// Configure axios with authentication
+const api = axios.create({
+  auth: {
+    username: API_USERNAME,
+    password: API_TOKEN,
+  },
+});
+
 export default createStore({
   state() {
     return {
@@ -213,25 +225,27 @@ export default createStore({
             }
 
             // Make API request to fetch verses
-            const response = await axios.get(`https://api.lsm.org/recver.php?String=${bookName} ${chapterNum}:${start}-${next}&Out=json`);
+            const encodedBookName = encodeURIComponent(bookName);
+            const url = `https://api.lsm.org/recver/txo.php?String=${encodedBookName}+${chapterNum}:${start}-${next}&Out=json`;
+
+            const response = await api.get(url);
             let data = response.data;
 
             // The response format is a "\[ *verse* \]" string returned for "Rom. 16:24", "Mark 9:44", and "Mark 9:46" for json parsing
             // The replace function will look for all backslashes and replace them with nothing
             // Then the JSON.parse function will turn the json string variable into an array
             // Handle string response by removing escape characters and parsing JSON
-            if (typeof data == "string") {
-              const removeSlash = data.replace(/\\/g, "").replace(/\//g, "");
-              data = JSON.parse(removeSlash);
+            if (typeof data === "string") {
+              data = JSON.parse(data.replace(/\\/g, "").replace(/\//g, ""));
             }
 
             // Process each verse in the response
             for (var index = 0; index < data.verses.length; index++) {
               const verse = data.verses[index];
 
-              // Remove brackets from verse text except for specific verses
-              if (verse.ref != "Rom. 16:24" && verse.ref != "Mark 9:44" && verse.ref != "Mark 9:46") {
-                verse.text = verse.text.replace(/$$/g, "").replace(/$$/g, "");
+              // Italicize bracketed text TBD
+              if (verse.ref !== "Rom. 16:24" && verse.ref !== "Mark 9:44" && verse.ref !== "Mark 9:46") {
+                // verse.text = verse.text.replace(/$$(.*?)$$/g, '<span class="italic">$1</span>');
               }
 
               // Break loop if a non-existent verse is encountered
