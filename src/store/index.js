@@ -226,7 +226,7 @@ export default createStore({
 
             // Make API request to fetch verses
             const encodedBookName = encodeURIComponent(bookName);
-            const url = `https://api.lsm.org/recver/txo.php?String=${encodedBookName}+${chapterNum}:${start}-${next}&Out=json`;
+            const url = `https://com.acsrcv.io:web_691b5280-229a-4859-be88-bd6cd4e76451@api.lsm.org/recver/txo.php?String=${encodedBookName}+${chapterNum}:${start}-${next}&Out=json`;
 
             const response = await api.get(url);
             let data = response.data;
