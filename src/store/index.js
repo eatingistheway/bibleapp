@@ -183,76 +183,85 @@ export default createStore({
     },
 
     async getVerses({ commit, getters }, payload) {
-      // Destructure payload and set default values
-      let { bookName, chapterNum, start = 1, end, sectionTitle = false, resetVerses = false } = payload;
+      try {
+        // Destructure payload and set default values
+        let { bookName, chapterNum, start = 1, end, sectionTitle = false, resetVerses = false } = payload;
 
-      // Reset verses if requested
-      if (resetVerses) {
-        commit("RESET_Verses");
-      }
+        if (!bookName || !chapterNum) {
+          throw new Error("Book name and chapter number are required");
+        }
 
-      // Ensure chapterNum and start are integers
-      chapterNum = parseInt(chapterNum);
-      start = parseInt(start);
+        // Reset verses if requested
+        if (resetVerses) {
+          commit("RESET_Verses");
+        }
 
-      // Set and validate end value
-      const chapterEnd = getters.getVerseCount(bookName, chapterNum);
-      end = Math.min(parseInt(end || chapterEnd), chapterEnd);
+        // Ensure chapterNum and start are integers
+        chapterNum = parseInt(chapterNum);
+        start = parseInt(start);
 
-      // Determine the title format based on sectionTitle flag
-      let title = sectionTitle ? `${bookName} ${chapterNum}:${start}-${end}` : `${bookName} ${chapterNum}`;
+        // Set and validate end value
+        const chapterEnd = getters.getVerseCount(bookName, chapterNum);
+        end = Math.min(parseInt(end || chapterEnd), chapterEnd);
 
-      // Define retry mechanism parameters
-      const maxRetries = 3; // Maximum number of retry attempts
-      let attempt = 0; // Current attempt counter
-      let success = false; // Flag to track success of data fetching
+        // Determine the title format based on sectionTitle flag
+        let title = sectionTitle ? `${bookName} ${chapterNum}:${start}-${end}` : `${bookName} ${chapterNum}`;
 
-      // Retry loop for fetching data
-      while (attempt < maxRetries && !success) {
-        try {
-          console.log(`Requesting ${bookName} ${chapterNum}:${start}-${end}`); // Log requested verses
+        // Define retry mechanism parameters
+        const maxRetries = 3; // Maximum number of retry attempts
+        let attempt = 0; // Current attempt counter
+        let success = false; // Flag to track success of data fetching
 
-          // Make API request to fetch verses
-          const encodedBookName = encodeURIComponent(bookName);
-          const url = `https://com.acsrcv.io:web_691b5280-229a-4859-be88-bd6cd4e76451@api.lsm.org/recver/txo.php?String=${encodedBookName}+${chapterNum}:${start}-${end}&Out=json`;
+        // Retry loop for fetching data
+        while (attempt < maxRetries && !success) {
+          try {
+            console.log(`Requesting ${bookName} ${chapterNum}:${start}-${end}`); // Log requested verses
 
-          const response = await api.get(url);
-          let data = response.data;
+            // Make API request to fetch verses
+            const encodedBookName = encodeURIComponent(bookName);
+            const url = `https://com.acsrcv.io:web_691b5280-229a-4859-be88-bd6cd4e76451@api.lsm.org/recver/txo.php?String=${encodedBookName}+${chapterNum}:${start}-${end}&Out=json`;
 
-          // Process each verse in the response
-          for (var index = 0; index < data.verses.length; index++) {
-            const verse = data.verses[index];
+            const response = await api.get(url);
+            let data = response.data;
 
-            // Break loop if a non-existent verse is encountered
-            if (verse.text.startsWith("No such verse")) {
-              break;
+            // Process each verse in the response
+            for (var index = 0; index < data.verses.length; index++) {
+              const verse = data.verses[index];
+
+              // Break loop if a non-existent verse is encountered
+              if (verse.text.startsWith("No such verse")) {
+                break;
+              }
+            }
+            data.verses = data.verses.slice(0, index); // Trim verses to valid ones
+
+            // Create section object with title and verses
+            const section = {
+              title: title,
+              verses: data.verses,
+            };
+
+            // Commit section to store if it contains verses
+            if (section.verses.length != 0) {
+              commit("SET_VERSES", section);
+            }
+
+            // Disable title for subsequent requests in the same section
+            title = "";
+            success = true; // Mark success if no errors occur
+          } catch (error) {
+            console.log(`Attempt ${attempt + 1} failed:`, error); // Log error with attempt number
+            attempt++; // Increment attempt counter
+            if (attempt >= maxRetries) {
+              console.error("Failed to load verses after multiple attempts."); // Log final failure
             }
           }
-          data.verses = data.verses.slice(0, index); // Trim verses to valid ones
-
-          // Create section object with title and verses
-          const section = {
-            title: title,
-            verses: data.verses,
-          };
-
-          // Commit section to store if it contains verses
-          if (section.verses.length != 0) {
-            commit("SET_VERSES", section);
-          }
-
-          // Disable title for subsequent requests in the same section
-          title = "";
-          success = true; // Mark success if no errors occur
-        } catch (error) {
-          console.log(`Attempt ${attempt + 1} failed:`, error); // Log error with attempt number
-          attempt++; // Increment attempt counter
-          if (attempt >= maxRetries) {
-            console.error("Failed to load verses after multiple attempts."); // Log final failure
-          }
         }
+        commit("FINISHED_LOADING_SECTION"); // Indicate loading completion
+      } catch (error) {
+        console.error("Error in getVerses:", error);
+        throw error;
       }
-      commit("FINISHED_LOADING_SECTION"); // Indicate loading completion
     },
   },
 
@@ -304,7 +313,15 @@ export default createStore({
     isMainViewVisible: (state) => state.mainView,
     getVerseCount: (state) => (bookName, chapterNum) => {
       const book = state.books.find((b) => b.name === bookName);
-      return book ? book.verseCounts[chapterNum - 1] : null;
+      if (!book) {
+        console.error(`Book not found: ${bookName}`);
+        return null;
+      }
+      if (chapterNum < 1 || chapterNum > book.chapters) {
+        console.error(`Invalid chapter ${chapterNum} for ${bookName}`);
+        return null;
+      }
+      return book.verseCounts[chapterNum - 1];
     },
   },
 });
