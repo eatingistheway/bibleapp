@@ -79,12 +79,7 @@
       </v-fade-transition>
     </div>
 
-    <!-- Mark as Completed -->
-    <h1>
-      <u>
-        <a href="http://5.161.111.178:8000/">Mark as completed!</a>
-      </u>
-    </h1>
+
 
     <!-- Copyright -->
     <div class="copyright text-body-2">
