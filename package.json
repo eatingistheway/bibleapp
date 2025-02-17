@@ -29,8 +29,7 @@
     "@vue/cli-service": "^5.0.8",
     "@vue/test-utils": "^2.4.0-alpha.2",
     "jsdom": "^25.0.1",
-    "vitest": "^2.1.8",
-    "yarn": "^1.22.22"
+    "vitest": "^2.1.8"
   },
   "engines": {
     "node": ">=18.0.0",
